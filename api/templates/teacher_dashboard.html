@@ -188,46 +188,84 @@
             💬 View conversation thread
           </summary>
           <div style="padding:1rem 1.5rem;">
-            <div class="chat-pane" style="max-height:300px;">
+            {% set ficons2={'photo':'📷','document':'📄','audio':'🎵','video':'🎬','voice':'🎤'} %}
+            <div class="chat-pane" id="tcp-{{ a.id }}">
               <div class="chat-thread">
-                <div class="bw teacher">
-                  <div class="bubble">📋 <strong>{{ a.title }}</strong><br>{{ a.description }}
-                    {% if a.material_file_id %}
-                      <br><a href="/api/file/{{ a.material_file_id }}" target="_blank" class="file-pill fp-dark">
-                        📎 {{ a.material_file_name or 'Assignment file' }}
-                      </a>
-                    {% endif %}
+                <div class="chat-date">{{ a.created_at.strftime('%B %d, %Y') }}</div>
+
+                {# Assignment — right blue #}
+                <div class="msg right">
+                  <div class="msg-col">
+                    <div class="bubble">
+                      <div style="font-size:.76rem;font-weight:800;opacity:.75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;">📋 {{ a.title }}</div>
+                      <div>{{ a.description }}</div>
+                      {% if a.material_file_id %}
+                      <div style="margin-top:.5rem;display:flex;gap:.35rem;flex-wrap:wrap;">
+                        <a href="/api/file/{{ a.material_file_id }}" target="_blank" download class="fchip fchip-w">📥 Download</a>
+                        <a href="/api/file/{{ a.material_file_id }}" target="_blank" class="fchip fchip-w">👁 View</a>
+                      </div>
+                      {% endif %}
+                    </div>
+                    <div class="msg-time">{{ teacher.name }} · {{ a.created_at.strftime('%H:%M') }}</div>
                   </div>
-                  <div class="bubble-meta">{{ teacher.name }} · {{ a.created_at.strftime('%b %d, %H:%M') }}</div>
+                  <div class="msg-av av-t">{{ teacher.name[0]|upper }}</div>
                 </div>
+
+                {# Progress — left white #}
                 {% if sub and sub.progress_notes %}
                   {% for line in sub.progress_notes.strip().split('\n') %}{% if line.strip() %}
-                  <div class="bw student">
-                    <div class="bubble">{{ line }}</div>
-                    <div class="bubble-meta">{{ s.name }}</div>
+                  <div class="msg left">
+                    <div class="msg-av av-s">{{ s.name[0]|upper }}</div>
+                    <div class="msg-col">
+                      <div class="msg-name">{{ s.name }}</div>
+                      <div class="bubble">{{ line }}</div>
+                      <div class="msg-time">Progress update</div>
+                    </div>
                   </div>
                   {% endif %}{% endfor %}
                 {% endif %}
+
+                {# Submission — left white #}
                 {% if sub and sub.submitted_at %}
-                <div class="bw student">
-                  <div class="bubble">
-                    {% if sub.submission_text and sub.submission_text not in ['(photo submitted)','(document submitted)','(audio submitted)','(video submitted)','(voice note submitted)'] %}{{ sub.submission_text }}{% else %}✅ Submitted{% endif %}
-                    {% if sub.file_id %}<br><a href="/api/file/{{ sub.file_id }}" target="_blank" class="file-pill fp-light">📎 Download {{ sub.file_type|title }}</a>{% endif %}
+                <div class="msg left">
+                  <div class="msg-av av-s">{{ s.name[0]|upper }}</div>
+                  <div class="msg-col">
+                    <div class="msg-name">{{ s.name }}</div>
+                    <div class="bubble">
+                      <div style="font-size:.78rem;font-weight:800;color:var(--success);margin-bottom:.3rem;">✅ Submitted</div>
+                      {% if sub.submission_text and sub.submission_text not in ['(photo submitted)','(document submitted)','(audio submitted)','(video submitted)','(voice note submitted)'] %}
+                        <div>{{ sub.submission_text }}</div>{% endif %}
+                      {% if sub.file_id %}
+                      <div style="margin-top:.4rem;display:flex;gap:.35rem;flex-wrap:wrap;">
+                        <a href="/api/file/{{ sub.file_id }}" target="_blank" download class="fchip fchip-b">📥 {{ ficons2.get(sub.file_type,'📎') }} Download</a>
+                        <a href="/api/file/{{ sub.file_id }}" target="_blank" class="fchip fchip-b">👁 View</a>
+                      </div>
+                      {% endif %}
+                    </div>
+                    <div class="msg-time">{{ sub.submitted_at.strftime('%b %d · %H:%M') }}</div>
                   </div>
-                  <div class="bubble-meta">{{ s.name }} · {{ sub.submitted_at.strftime('%b %d, %H:%M') }}</div>
                 </div>
                 {% endif %}
+
+                {# Feedback — right purple #}
                 {% if sub and sub.feedback %}
-                <div class="bw feedback">
-                  <div class="bubble">💬 <strong>Feedback</strong><br>{{ sub.feedback }}</div>
-                  <div class="bubble-meta">{{ teacher.name }} · {{ sub.feedback_at.strftime('%b %d, %H:%M') if sub.feedback_at else '' }}</div>
+                <div class="msg right feedback">
+                  <div class="msg-col">
+                    <div class="bubble">
+                      <div style="font-size:.76rem;font-weight:800;opacity:.8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;">💬 Feedback</div>
+                      <div>{{ sub.feedback }}</div>
+                    </div>
+                    <div class="msg-time">{{ teacher.name }} · {{ sub.feedback_at.strftime('%b %d · %H:%M') if sub.feedback_at else '' }}</div>
+                  </div>
+                  <div class="msg-av av-f">{{ teacher.name[0]|upper }}</div>
                 </div>
                 {% endif %}
                 {% if not sub or (not sub.progress_notes and not sub.submitted_at) %}
-                <div class="bw system"><div class="bubble">No activity yet</div></div>
+                <div class="msg center"><div class="bubble">No activity yet from this student 💬</div></div>
                 {% endif %}
               </div>
             </div>
+            <script>(function(){var p=document.getElementById('tcp-{{ a.id }}');if(p)p.scrollTop=p.scrollHeight;})();</script>
           </div>
         </details>
       </td>
