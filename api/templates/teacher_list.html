@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% set active_tab = "teachers" %}
+{% block title %}Teachers — ClassMate{% endblock %}
+{% block content %}
+<h1 class="page-title">👩‍🏫 All Teachers</h1>
+
+{% if teachers %}
+<div class="card">
+  <div class="card-body" style="padding:0;">
+    <table class="tbl">
+      <tr>
+        <th>Teacher</th>
+        <th>Invite Code</th>
+        <th>Students</th>
+        <th>Joined</th>
+        <th></th>
+      </tr>
+      {% for t in teachers %}
+      <tr>
+        <td>
+          <div class="person-row">
+            <div class="avatar" style="background:linear-gradient(135deg,#1e40af,#3b82f6);">{{ t.name[0]|upper }}</div>
+            <div>
+              <strong>{{ t.name }}</strong><br>
+              <span style="font-size:.82rem;color:var(--muted);">@{{ t.username or '—' }}</span>
+            </div>
+          </div>
+        </td>
+        <td><code style="background:#f1f5f9;padding:3px 10px;border-radius:6px;font-size:.88rem;">{{ t.invite_code }}</code></td>
+        <td><span class="badge badge-progress">{{ t.students|length }}</span></td>
+        <td style="color:var(--muted);font-size:.88rem;">{{ t.created_at.strftime('%b %d, %Y') }}</td>
+        <td><a class="btn btn-primary btn-sm" href="/teacher/{{ t.id }}">Dashboard →</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty-state"><div class="icon">👩‍🏫</div><p>No teachers registered yet.<br>Start the bot and type /start</p></div></div>
+{% endif %}
+{% endblock %}

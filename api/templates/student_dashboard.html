@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% set active_tab = "students" %}
+{% block title %}{{ student.name }} — Student Dashboard{% endblock %}
+{% block content %}
+<script>window._autoRefresh=true;</script>
+<a href="/students" class="back">← All Students</a>
+
+<!-- Student Header -->
+<div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+  <div class="avatar" style="width:64px;height:64px;font-size:1.5rem;background:linear-gradient(135deg,#16a34a,#4ade80);">{{ student.name[0]|upper }}</div>
+  <div>
+    <h1 class="page-title" style="margin-bottom:.15rem;">{{ student.name }}</h1>
+    <div style="color:var(--muted);font-size:.9rem;">
+      @{{ student.username or '—' }} &nbsp;·&nbsp;
+      Teacher: <a href="/teacher/{{ student.teacher_id }}" style="color:var(--primary);font-weight:700;">{{ student.teacher.name }}</a> &nbsp;·&nbsp;
+      Joined {{ student.created_at.strftime('%b %d, %Y') }}
+    </div>
+  </div>
+  <a href="/teacher/{{ student.teacher_id }}" class="btn btn-outline btn-sm" style="margin-left:auto;">👩‍🏫 Teacher View</a>
+</div>
+
+<!-- Stats -->
+{% set total = all_assignments|length %}
+{% set done  = all_assignments|selectattr('submission')|selectattr('submission.status','eq','completed')|list|length %}
+{% set active = total - done %}
+<div class="stat-row">
+  <div class="stat-box blue"><div class="val">{{ total }}</div><div class="lbl">Total</div></div>
+  <div class="stat-box green"><div class="val">{{ done }}</div><div class="lbl">Completed</div></div>
+  <div class="stat-box amber"><div class="val">{{ active }}</div><div class="lbl">Active</div></div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="filter-bar">
+    <span style="font-size:.88rem;font-weight:700;color:var(--muted);">🔍 Filter</span>
+    <select onchange="window.location.href='/student/{{ student.telegram_id }}?status_filter='+this.value">
+      <option value="all" {% if status_filter=='all' %}selected{% endif %}>All</option>
+      <option value="pending" {% if status_filter=='pending' %}selected{% endif %}>Pending</option>
+      <option value="in_progress" {% if status_filter=='in_progress' %}selected{% endif %}>In Progress</option>
+      <option value="completed" {% if status_filter=='completed' %}selected{% endif %}>Completed</option>
+      <option value="overdue" {% if status_filter=='overdue' %}selected{% endif %}>Overdue</option>
+    </select>
+    {% if status_filter != 'all' %}<a href="/student/{{ student.telegram_id }}" class="btn btn-ghost btn-sm">✕ Clear</a>{% endif %}
+  </div>
+</div>
+
+{% if not assignment_data %}
+<div class="card"><div class="empty"><div class="icon">📝</div>
+  <p>No assignments{% if status_filter!='all' %} matching "{{ status_filter }}"{% endif %}.</p>
+</div></div>
+{% else %}
+
+{% for row in assignment_data %}
+{% set a = row.assignment %}
+{% set sub = row.submission %}
+{% set days_left = (a.deadline - now).days %}
+{% set total_days = [(a.deadline - a.created_at).days, 1]|max %}
+{% set elapsed_pct = [[(((total_days - days_left) / total_days * 100)|round(0)|int), 0]|max, 100]|min %}
+
+<div class="card" style="margin-bottom:1.75rem;">
+  <div class="card-header">
+    <div>
+      <div style="font-size:1.1rem;font-weight:800;">📝 {{ a.title }}</div>
+      <div style="font-size:.83rem;color:var(--muted);">Assigned {{ a.created_at.strftime('%b %d, %Y') }}</div>
+    </div>
+    {% if sub %}
+    {% if sub.status=='completed' %}<span class="badge badge-completed" style="font-size:.9rem;">✅ Completed</span>
+    {% elif days_left<0 %}<span class="badge badge-overdue" style="font-size:.9rem;">⚠️ Overdue</span>
+    {% elif sub.status=='in_progress' %}<span class="badge badge-progress" style="font-size:.9rem;">🔄 In Progress</span>
+    {% else %}<span class="badge badge-pending" style="font-size:.9rem;">⏳ Pending</span>{% endif %}
+    {% endif %}
+  </div>
+
+  <div style="padding:1.5rem;">
+    <!-- Description -->
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;">
+      <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.4rem;">Assignment</div>
+      <div style="font-size:.98rem;line-height:1.65;">{{ a.description }}</div>
+      {% if a.material_file_id %}
+        {% set ficons={'photo':'📷','document':'📄','audio':'🎵','video':'🎬','voice':'🎤'} %}
+        <a href="/api/file/{{ a.material_file_id }}" target="_blank" download
+           class="file-pill fp-light" style="margin-top:.75rem;">
+          {{ ficons.get(a.material_file_type,'📎') }} Download: {{ a.material_file_name or 'Assignment File' }}
+        </a>
+        <a href="/api/file/{{ a.material_file_id }}" target="_blank"
+           class="file-pill fp-light" style="margin-top:.4rem;margin-left:.4rem;">
+          👁 View in browser
+        </a>
+      {% endif %}
+    </div>
+
+    <!-- Deadline + info row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+      <div>
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.35rem;">Deadline</div>
+        <div style="font-size:1rem;font-weight:800;">{{ a.deadline.strftime('%a, %b %d, %Y') }}</div>
+        <div style="font-size:.85rem;margin-top:.25rem;">
+          {% if days_left>=0 %}<span style="color:var(--success);font-weight:700;">{{ days_left }} day(s) left</span>
+          {% else %}<span style="color:var(--danger);font-weight:700;">{{ days_left|abs }} day(s) overdue</span>{% endif %}
+        </div>
+        <div class="dl-bar-bg">
+          <div class="dl-bar {% if days_left<0 %}bar-danger{% elif days_left<=1 %}bar-danger{% elif days_left<=2 %}bar-warn{% else %}bar-safe{% endif %}"
+               style="width:{{ elapsed_pct }}%;"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.35rem;">Reminders Sent</div>
+        <div style="font-size:1.6rem;font-weight:900;">🔔 {{ sub.reminder_count if sub else 0 }}</div>
+      </div>
+      <div>
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.35rem;">Submitted</div>
+        {% if sub and sub.submitted_at %}
+          <div style="font-size:.95rem;font-weight:700;color:var(--success);">{{ sub.submitted_at.strftime('%b %d, %H:%M') }}</div>
+        {% else %}
+          <div style="font-size:.9rem;color:var(--muted);">Not yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Conversation Thread -->
+    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.65rem;">Conversation Thread</div>
+    <div class="chat-pane">
+      <div class="chat-thread">
+
+        <!-- Assignment from teacher -->
+        <div class="bw teacher">
+          <div class="bubble">
+            📋 <strong>New Assignment from {{ student.teacher.name }}</strong><br><br>
+            {{ a.description }}<br><br>
+            📅 <strong>Due:</strong> {{ a.deadline.strftime('%A, %B %d, %Y') }}
+            {% if a.material_file_id %}
+              <br><a href="/api/file/{{ a.material_file_id }}" target="_blank" download class="file-pill fp-dark">
+                📎 Download: {{ a.material_file_name or 'Assignment File' }}
+              </a>
+              <a href="/api/file/{{ a.material_file_id }}" target="_blank" class="file-pill fp-dark" style="margin-left:.3rem;">
+                👁 View
+              </a>
+            {% endif %}
+          </div>
+          <div class="bubble-meta">{{ student.teacher.name }} · {{ a.created_at.strftime('%b %d, %H:%M') }}</div>
+        </div>
+
+        <!-- Progress notes -->
+        {% if sub and sub.progress_notes %}
+          {% for line in sub.progress_notes.strip().split('\n') %}{% if line.strip() %}
+          <div class="bw student">
+            <div class="bubble">{{ line }}</div>
+            <div class="bubble-meta">{{ student.name }}</div>
+          </div>
+          {% endif %}{% endfor %}
+        {% endif %}
+
+        <!-- Submission -->
+        {% if sub and sub.submitted_at %}
+        <div class="bw student">
+          <div class="bubble">
+            {% if sub.submission_text and sub.submission_text not in ['(photo submitted)','(document submitted)','(audio submitted)','(video submitted)','(voice note submitted)'] %}
+              {{ sub.submission_text }}
+            {% else %}✅ Work submitted!{% endif %}
+            {% if sub.file_id %}
+              {% set ficons={'photo':'📷','document':'📄','audio':'🎵','video':'🎬','voice':'🎤'} %}
+              <br><a href="/api/file/{{ sub.file_id }}" target="_blank" download class="file-pill fp-light">
+                {{ ficons.get(sub.file_type,'📎') }} Download {{ sub.file_type|title }}
+              </a>
+              <a href="/api/file/{{ sub.file_id }}" target="_blank" class="file-pill fp-light" style="margin-left:.3rem;">
+                👁 View
+              </a>
+            {% endif %}
+          </div>
+          <div class="bubble-meta">{{ student.name }} · {{ sub.submitted_at.strftime('%b %d, %H:%M') }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Feedback -->
+        {% if sub and sub.feedback %}
+        <div class="bw feedback">
+          <div class="bubble">💬 <strong>Feedback from {{ student.teacher.name }}</strong><br><br>{{ sub.feedback }}</div>
+          <div class="bubble-meta">{{ student.teacher.name }} · {{ sub.feedback_at.strftime('%b %d, %H:%M') if sub.feedback_at else '' }}</div>
+        </div>
+        {% endif %}
+
+        {% if not sub or (not sub.progress_notes and not sub.submitted_at) %}
+        <div class="bw system"><div class="bubble">No activity yet — send a progress update on Telegram!</div></div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

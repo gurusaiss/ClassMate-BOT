@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% set active_tab = "students" %}
+{% block title %}Students — ClassMate{% endblock %}
+{% block content %}
+<h1 class="page-title">👩‍🎓 All Students</h1>
+{% if filter_teacher %}<p class="page-sub">Filtered by teacher: <strong>{{ filter_teacher.name }}</strong> · <a href="/students">Clear</a></p>{% endif %}
+
+<div class="card">
+  <div class="filter-bar">
+    <span style="font-size:.88rem;font-weight:700;color:var(--muted);">🔍 Search</span>
+    <input id="stuSearch" type="text" placeholder="Search by name…" value="{{ search }}" style="min-width:220px;">
+    {% if search %}<a href="/students{% if filter_teacher %}?teacher={{ filter_teacher.id }}{% endif %}" class="btn btn-ghost btn-sm">✕ Clear</a>{% endif %}
+  </div>
+  {% if students %}
+  <div style="overflow-x:auto;">
+  <table class="tbl" id="stuTable">
+    <thead><tr>
+      <th>Student</th><th>Teacher</th><th>Total</th><th>Completed</th><th>Active</th><th>Joined</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for s in students %}
+    {% set total = s.submissions|length %}
+    {% set done  = s.submissions|selectattr('status','eq','completed')|list|length %}
+    {% set actv  = total - done %}
+    <tr>
+      <td>
+        <div class="person-row">
+          <div class="avatar" style="width:42px;height:42px;font-size:.95rem;background:linear-gradient(135deg,#16a34a,#4ade80);">{{ s.name[0]|upper }}</div>
+          <div><strong>{{ s.name }}</strong><br><span style="font-size:.8rem;color:var(--muted);">@{{ s.username or '—' }}</span></div>
+        </div>
+      </td>
+      <td><a href="/teacher/{{ s.teacher_id }}" style="color:var(--primary);font-weight:600;text-decoration:none;">{{ s.teacher.name }}</a></td>
+      <td><span class="badge badge-progress">{{ total }}</span></td>
+      <td><span class="badge badge-completed">{{ done }}</span></td>
+      <td><span class="badge badge-pending">{{ actv }}</span></td>
+      <td style="color:var(--muted);font-size:.85rem;">{{ s.created_at.strftime('%b %d, %Y') }}</td>
+      <td><a class="btn btn-primary btn-sm" href="/student/{{ s.telegram_id }}">View →</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty"><div class="icon">👩‍🎓</div><p>No students found.</p></div>
+  {% endif %}
+</div>
+
+<script>liveSearch('stuSearch','#stuTable tbody tr',0);</script>
+{% endblock %}

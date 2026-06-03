@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% set active_tab = "home" %}
+{% block title %}Home — ClassMate{% endblock %}
+{% block content %}
+<h1 class="page-title">🎓 ClassMate Overview</h1>
+<p class="page-sub">Real-time classroom assignment management</p>
+
+<div class="stat-row">
+  <div class="stat-box blue"><div class="val">{{ teachers|length }}</div><div class="lbl">Teachers</div></div>
+  <div class="stat-box blue"><div class="val">{{ students|length }}</div><div class="lbl">Students</div></div>
+  <div class="stat-box amber"><div class="val">{{ pending }}</div><div class="lbl">Active Assignments</div></div>
+  <div class="stat-box green"><div class="val">{{ completed }}</div><div class="lbl">Completed</div></div>
+  <div class="stat-box blue"><div class="val">{{ total_assignments }}</div><div class="lbl">Total Assignments</div></div>
+</div>
+
+<div class="grid-2" style="gap:1.5rem;margin-bottom:1.5rem;">
+  <!-- Teachers -->
+  <div class="card">
+    <div class="card-header">
+      <h2>👩‍🏫 Teachers</h2>
+      <a href="/teacher" class="btn btn-outline btn-sm">View All →</a>
+    </div>
+    {% if teachers %}
+    <table class="tbl">
+      <thead><tr><th>Teacher</th><th>Students</th><th>Invite Code</th><th></th></tr></thead>
+      <tbody>
+      {% for t in teachers %}
+      <tr>
+        <td>
+          <div class="person-row">
+            <div class="avatar" style="width:40px;height:40px;font-size:.95rem;background:linear-gradient(135deg,#1e40af,#3b82f6);">{{ t.name[0]|upper }}</div>
+            <div><strong>{{ t.name }}</strong><br><span style="font-size:.8rem;color:var(--muted);">@{{ t.username or '—' }}</span></div>
+          </div>
+        </td>
+        <td><span class="badge badge-progress">{{ t.students|length }}</span></td>
+        <td><code style="background:#f1f5f9;padding:2px 8px;border-radius:5px;font-size:.82rem;">{{ t.invite_code }}</code></td>
+        <td><a class="btn btn-primary btn-sm" href="/teacher/{{ t.id }}">Dashboard →</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><div class="icon">👩‍🏫</div><p>No teachers yet. Start the bot and type /start</p></div>
+    {% endif %}
+  </div>
+
+  <!-- Students -->
+  <div class="card">
+    <div class="card-header">
+      <h2>👩‍🎓 Students</h2>
+      <a href="/students" class="btn btn-outline btn-sm">View All →</a>
+    </div>
+    {% if students %}
+    <table class="tbl">
+      <thead><tr><th>Student</th><th>Teacher</th><th>Assignments</th><th></th></tr></thead>
+      <tbody>
+      {% for s in students %}
+      <tr>
+        <td>
+          <div class="person-row">
+            <div class="avatar" style="width:40px;height:40px;font-size:.95rem;background:linear-gradient(135deg,#16a34a,#4ade80);">{{ s.name[0]|upper }}</div>
+            <div><strong>{{ s.name }}</strong><br><span style="font-size:.8rem;color:var(--muted);">@{{ s.username or '—' }}</span></div>
+          </div>
+        </td>
+        <td style="font-size:.88rem;">{{ s.teacher.name }}</td>
+        <td><span class="badge badge-pending">{{ s.submissions|length }}</span></td>
+        <td><a class="btn btn-primary btn-sm" href="/student/{{ s.telegram_id }}">View →</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><div class="icon">👩‍🎓</div><p>No students yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Chart + How it works -->
+<div class="grid-2" style="gap:1.5rem;">
+  <div class="card">
+    <div class="card-header"><h2>📊 Assignment Status Chart</h2></div>
+    <div class="card-body" style="display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;">
+      <div class="chart-wrap"><canvas id="donutChart"></canvas></div>
+      <div id="chartLegend"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>🤖 How ClassMate Works</h2></div>
+    <div class="card-body">
+      {% for step,icon,title,desc in [
+        ('1','👩‍🏫','Teacher Registers','Start the bot → "I\'m a Teacher" → get invite code'),
+        ('2','📨','Students Join','Click invite link → auto-linked to teacher'),
+        ('3','📝','Assign Work','Describe task in natural language or send a PDF with caption'),
+        ('4','🔔','Smart Reminders','Escalating reminders as deadline approaches'),
+        ('5','✅','Submit & Feedback','Student submits text/file → teacher gives feedback'),
+      ] %}
+      <div style="display:flex;gap:.85rem;align-items:flex-start;margin-bottom:.9rem;">
+        <div style="background:var(--primary);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:900;flex-shrink:0;">{{ step }}</div>
+        <div><strong>{{ icon }} {{ title }}</strong><br><span style="font-size:.85rem;color:var(--muted);">{{ desc }}</span></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const completed={{ completed }}, pending={{ pending }}, total={{ total_assignments }};
+  const other=Math.max(0,total-completed-pending);
+  const ctx=document.getElementById('donutChart');
+  if(!ctx)return;
+  const chart=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['Completed','Active','Total'],
+      datasets:[{data:[completed,pending,Math.max(0,other)],
+        backgroundColor:['#16a34a','#d97706','#e2e8f0'],
+        borderWidth:3,borderColor:'#fff',hoverBorderWidth:3}]
+    },
+    options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{
+      label:c=>`${c.label}: ${c.raw}`
+    }}}}
+  });
+  const leg=document.getElementById('chartLegend');
+  [['#16a34a','Completed',completed],['#d97706','Active',pending],['#e2e8f0','Other',other]]
+    .forEach(([c,l,v])=>{
+      leg.innerHTML+=`<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;">
+        <div style="width:12px;height:12px;border-radius:3px;background:${c};flex-shrink:0;"></div>
+        <span style="font-size:.88rem;">${l}: <strong>${v}</strong></span></div>`;
+    });
+})();
+</script>
+{% endblock %}
