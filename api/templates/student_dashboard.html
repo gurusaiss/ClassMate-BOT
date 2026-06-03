@@ -21,11 +21,12 @@
 
 <!-- Stats -->
 {% set total = all_assignments|length %}
-{% set done  = all_assignments|selectattr('submission')|selectattr('submission.status','eq','completed')|list|length %}
-{% set active = total - done %}
+{% set done = namespace(n=0) %}
+{% for a in all_assignments %}{% if a.submission and a.submission.status == 'completed' %}{% set done.n = done.n + 1 %}{% endif %}{% endfor %}
+{% set active = total - done.n %}
 <div class="stat-row">
   <div class="stat-box blue"><div class="val">{{ total }}</div><div class="lbl">Total</div></div>
-  <div class="stat-box green"><div class="val">{{ done }}</div><div class="lbl">Completed</div></div>
+  <div class="stat-box green"><div class="val">{{ done.n }}</div><div class="lbl">Completed</div></div>
   <div class="stat-box amber"><div class="val">{{ active }}</div><div class="lbl">Active</div></div>
 </div>
 

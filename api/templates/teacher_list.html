@@ -19,7 +19,7 @@
       <tr>
         <td>
           <div class="person-row">
-            <div class="avatar" style="background:linear-gradient(135deg,#1e40af,#3b82f6);">{{ t.name[0]|upper }}</div>
+            <div class="avatar" style="width:40px;height:40px;font-size:.9rem;background:linear-gradient(135deg,#1e40af,#3b82f6);">{{ t.name[0]|upper }}</div>
             <div>
               <strong>{{ t.name }}</strong><br>
               <span style="font-size:.82rem;color:var(--muted);">@{{ t.username or '—' }}</span>
@@ -36,6 +36,6 @@
   </div>
 </div>
 {% else %}
-<div class="card"><div class="empty-state"><div class="icon">👩‍🏫</div><p>No teachers registered yet.<br>Start the bot and type /start</p></div></div>
+<div class="card"><div class="empty"><div class="icon">👩‍🏫</div><p>No teachers registered yet.<br>Start the bot and type /start</p></div></div>
 {% endif %}
 {% endblock %}

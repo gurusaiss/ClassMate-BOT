@@ -205,19 +205,30 @@ async def post_feedback(submission_id: int, feedback: str = Form(...)):
         formatted = reformat_feedback(feedback, sub.student.name)
         crud.save_feedback(db, sub, formatted)
 
-        # Try to send via Telegram bot if bot is available
+        # Try to send via Telegram bot (best-effort — safe across threads)
         try:
             from bot.bot_instance import get_bot
+            import asyncio, threading
             bot = get_bot()
             if bot:
-                import asyncio
                 from agents.student_agent import deliver_feedback
                 msg = deliver_feedback(sub.student.name, sub.assignment.title, formatted)
-                asyncio.run_coroutine_threadsafe(
-                    bot.send_message(chat_id=sub.student.telegram_id,
-                                     text=f"📝 Feedback from your teacher:\n\n{msg}"),
-                    asyncio.get_event_loop()
-                )
+
+                async def _send():
+                    await bot.send_message(
+                        chat_id=sub.student.telegram_id,
+                        text=f"📝 Feedback from your teacher:\n\n{msg}"
+                    )
+
+                # Spin up a fresh event loop in a background thread — avoids
+                # "no running event loop" errors when called from a sync context
+                def _run():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(_send())
+                    loop.close()
+
+                threading.Thread(target=_run, daemon=True).start()
         except Exception:
             pass  # Telegram send is best-effort from web
 
